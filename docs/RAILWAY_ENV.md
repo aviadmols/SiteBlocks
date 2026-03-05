@@ -28,8 +28,7 @@
 
 | Variable          | Value       | Description |
 |-------------------|-------------|-------------|
-| `SESSION_DRIVER`  | `database`  | ברירת מחדל. דורש הרצת מיגרציות (טבלת `sessions`). |
-| `SESSION_DRIVER`  | `file`      | אם עדיין לא הרצת מיגרציות – שימוש זמני ב־`file` מאפשר לדפים לעלות; אחרי `migrate` אפשר להחזיר ל־`database`. |
+| `SESSION_DRIVER`  | *(לא חובה)* | ב־production ברירת המחדל היא `file` – דף הלוגין והאפליקציה עולים גם בלי טבלת sessions. אחרי הרצת `migrate` אפשר להגדיר `SESSION_DRIVER=database` ל־sessions קבועים. |
 
 ---
 
