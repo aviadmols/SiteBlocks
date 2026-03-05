@@ -34,6 +34,8 @@ Use Railway's shell or a one-off run. Do not run migrations in the build phase.
 
 ## Required environment variables
 
+For the **full list and explanations** (including Postgres vs App service), see [RAILWAY_ENV.md](RAILWAY_ENV.md).
+
 | Variable                   | Required | Description |
 |----------------------------|----------|-------------|
 | `RAILPACK_PHP_EXTENSIONS`  | **Yes**  | Set to `intl,zip` so the build installs these PHP extensions. |
@@ -41,8 +43,8 @@ Use Railway's shell or a one-off run. Do not run migrations in the build phase.
 | `APP_ENV`       | Yes      | `production` |
 | `APP_DEBUG`     | Yes      | `false` |
 | `APP_URL`       | Yes      | Full URL of the app (e.g. `https://yourapp.up.railway.app`) |
-| `DB_CONNECTION` | Yes      | `pgsql` |
-| `DATABASE_URL`  | Yes      | PostgreSQL connection URL (provided by Railway when you add Postgres). |
+| `DB_CONNECTION` | Yes      | `pgsql` (must be set in the **app** service; otherwise Laravel defaults to sqlite and returns 500). |
+| `DATABASE_URL`  | Yes      | PostgreSQL connection URL. In the **app** service: set as Reference from Postgres, or use Railway's automatic injection when Postgres is linked. |
 
 ## Optional
 
@@ -80,17 +82,20 @@ Use Railway's shell or a one-off run. Do not run migrations in the build phase.
 1. **See the real error**  
    In Railway **Deployments → View Logs**, check the **runtime** logs when you open the site. The 500 response is usually logged with the PHP exception (e.g. missing `APP_KEY`, database connection failed, table not found).
 
-2. **Check these variables**  
-   - `APP_KEY` – must be set (e.g. from `php artisan key:generate`).  
-   - `DATABASE_URL` – must point to your Postgres and be correct.  
-   - `APP_URL` – e.g. `https://siteblocks-production.up.railway.app`.
+2. **Variables in the app service**  
+   Ensure these are set **in the Laravel app service** (not only in Postgres):  
+   - `DB_CONNECTION=pgsql` – without this, Laravel uses sqlite and fails.  
+   - `DATABASE_URL` – reference from Postgres or auto-injected when linked.  
+   - `APP_KEY`, `APP_URL` (e.g. `https://siteblocks-production.up.railway.app`).  
+   Full list: [RAILWAY_ENV.md](RAILWAY_ENV.md).
 
-3. **Migrations**  
-   If the error mentions "sessions" or "table not found", run:
+3. **Migrations and seed**  
+   After first deploy, run in the **app** service Shell:
    ```bash
    php artisan migrate --force
+   php artisan db:seed
    ```
-   (via Railway Shell or one-off command). The default session driver is `database`; the `sessions` table must exist.
+   Without migrations, the `sessions` and `users` tables don't exist → 500 on login and other web pages. Without seed, there is no user to log in with.
 
 4. **Test without session/views**  
    Open: `https://your-app.up.railway.app/api/ping`  
