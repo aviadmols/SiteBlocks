@@ -19,6 +19,21 @@
     window.SiteBlocks = { loaded: true, siteKey: siteKey || null, debug: debugMode };
   }
 
+  /** Show a visible badge on the page when debug=1 so you can see the script loaded without opening console */
+  function showDebugBadge(text) {
+    if (!debugMode || typeof document === 'undefined') return;
+    var id = 'siteblocks-debug-badge';
+    var el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:999999;background:#111;color:#0f0;font:12px monospace;padding:8px 12px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);max-width:280px;';
+      var target = document.body || document.documentElement;
+      if (target) target.appendChild(el);
+    }
+    if (el) el.textContent = text;
+  }
+
   function log() {
     if (debugMode && typeof console !== 'undefined' && console.log) {
       console.log.apply(console, ['[Embed]'].concat(Array.prototype.slice.call(arguments)));
@@ -71,8 +86,10 @@
   function loadAndRun() {
     if (!siteKey) {
       log('Missing site key in script URL (?site=...)');
+      showDebugBadge('SiteBlocks: missing ?site= in script URL');
       return;
     }
+    showDebugBadge('SiteBlocks: loading...');
     log('Embed loaded for site:', siteKey);
     const configUrl = EMBED_BASE + CONFIG_PATH + '/' + encodeURIComponent(siteKey) + '/config';
     log('Fetching config:', configUrl);
@@ -85,6 +102,7 @@
       .then(function (data) {
         const blocks = data && data.blocks ? data.blocks : [];
         log('Blocks:', blocks.length);
+        showDebugBadge('SiteBlocks: loaded, ' + blocks.length + ' block(s)');
         blocks.forEach(function (block) {
           if (!shouldShowBlock(block.display_rules)) {
             log('Block skipped by display_rules:', block.id);
@@ -104,6 +122,7 @@
       })
       .catch(function (err) {
         log('Config fetch error', err);
+        showDebugBadge('SiteBlocks: config error (check console)');
       });
   }
 

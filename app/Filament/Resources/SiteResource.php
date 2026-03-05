@@ -84,7 +84,7 @@ class SiteResource extends Resource
         return $infolist
             ->schema([
                 InfolistSection::make('Embed script – copy and paste into your site')
-                    ->description('Add this script to your site (e.g. before </body>). To verify it is active: open your site → F12 → Console, type SiteBlocks and press Enter. If you see { loaded: true, siteKey: \"...\" } the script is running. You can also add &debug=1 to the script URL to see [Embed] logs, or check the Network tab for embed.js (status 200).')
+                    ->description('Add this script to your site (e.g. before </body>). To see that it loads: add &debug=1 before the closing quote in the script src — e.g. embed.js?site=YOUR_KEY&debug=1 — then open your site; a green badge at the bottom-right will show "SiteBlocks: loaded, X block(s)". If you see no badge, the script did not load (check the domain is in Allowed domains, or try opening the script URL in the browser).')
                     ->schema([
                         TextEntry::make('embed_snippet')
                             ->label('Script to embed')
