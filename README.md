@@ -75,7 +75,8 @@ All public endpoints are rate-limited; IP and User-Agent are hashed and not stor
 
 1. **New project** – Connect repo; add **PostgreSQL** from Railway dashboard.
 
-2. **Variables** – Set in Railway:
+2. **Variables** – Set in Railway (Project → Variables):
+   - **`RAILPACK_PHP_EXTENSIONS`** = **`intl,zip`** (required; otherwise the build fails with missing ext-intl/ext-zip)
    - `APP_ENV=production`
    - `APP_DEBUG=false`
    - `APP_URL=https://YOUR_APP_UP.railway.app` (or your custom domain)
