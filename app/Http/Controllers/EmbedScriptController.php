@@ -12,8 +12,10 @@ class EmbedScriptController
      */
     public function __invoke(): Response
     {
+        $baseUrl = request()->getSchemeAndHttpHost() ?: config('app.url');
+
         $content = View::make('embed.script', [
-            'embedBaseUrl' => rtrim(config('app.url'), '/'),
+            'embedBaseUrl' => rtrim($baseUrl, '/'),
         ])->render();
 
         return response($content, 200, [
