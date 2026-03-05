@@ -43,7 +43,7 @@ For the **full list and explanations** (including Postgres vs App service), see 
 | `APP_ENV`       | Yes      | `production` |
 | `APP_DEBUG`     | Yes      | `false` |
 | `APP_URL`       | Yes      | Full URL of the app (e.g. `https://yourapp.up.railway.app`) |
-| `DB_CONNECTION` | Yes      | `pgsql` (must be set in the **app** service; otherwise Laravel defaults to sqlite and returns 500). |
+| `DB_CONNECTION` | Yes      | `pgsql`. Set as a **plain Variable** (not Secret), so the build step (config:cache) can read it; otherwise you may get "secret DB_CONNECTION: not found". |
 | `DATABASE_URL`  | Yes      | PostgreSQL connection URL. In the **app** service: set as Reference from Postgres, or use Railway's automatic injection when Postgres is linked. |
 
 ## Optional

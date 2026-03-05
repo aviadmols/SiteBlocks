@@ -15,7 +15,7 @@
 
 | Variable         | Value | Description |
 |------------------|-------|-------------|
-| `DB_CONNECTION`  | `pgsql` | **חשוב.** בלי זה Laravel משתמש ב־sqlite (ברירת מחדל) ונגרם 500. |
+| `DB_CONNECTION`  | `pgsql` | **חשוב.** הגדר כ־**Variable רגיל** (לא Secret), כי ה־build מריץ `config:cache` וצריך את הערך. בלי זה: 500 או "secret DB_CONNECTION: not found" ב־build. |
 | `DATABASE_URL`   | *(Reference)* | כתובת חיבור ל־Postgres. ב־Railway: **Variables → Add Variable → Reference** → בחר את שירות Postgres → `DATABASE_URL`. אם קישרת את Postgres לשירות האפליקציה, Railway מזריק `DATABASE_URL` אוטומטית – אז רק וודא ש־`DB_CONNECTION=pgsql`. |
 
 ## חובה – Build
@@ -102,3 +102,17 @@
 2. **בצע Redeploy** כדי שה־build ירוץ מחדש עם ההרחבה.
 3. וודא ש־**DB_CONNECTION=pgsql** ו־**DATABASE_URL** מוגדרים באותו שירות (כך שגם ב־Shell הפקודה migrate תשתמש ב־Postgres).
 4. הרץ שוב: `php artisan migrate --force`, ואז `php artisan db:seed`.
+
+---
+
+## "could not find driver" / "Connection: sqlite" בדפי האתר (למשל /livewire/update)
+
+אם השגיאה מופיעה **בעת גלישה** (לא רק ב־migrate) – Laravel משתמש ב־sqlite כי **בשירות האפליקציה לא הוגדרו** `DB_CONNECTION` ו־`DATABASE_URL`.
+
+- **פתרון:** בשירות האפליקציה (Laravel) ב־Variables הוסף/עדכן:
+  - `DB_CONNECTION` = `pgsql`
+  - `DATABASE_URL` = Reference משירות Postgres (או קישור את Postgres לשירות כדי ש־Railway יזריק אוטומטית)
+- **Redeploy** אחרי שינוי משתנים.
+- בפרודקשן ה־cache מוגדר כברירת מחדל ל־`file` כדי שלא יהיה תלות ב־DB ל־cache; גם כך חובה להגדיר את חיבור ה־DB להתחברות ולנתונים.
+
+**אם עדיין מופיע "Connection: sqlite":** ה־build מריץ `config:cache` כש־DATABASE_URL אולי עדיין לא זמין, ולכן ה־config השמור "זוכר" חיבור לא נכון. ה־Procfile מריץ `php artisan config:clear` לפני ההפעלה כדי שה־config ייבנה מחדש מה־env בזמן ריצה. וודא ש־**DATABASE_URL** אכן מוזרק משירות Postgres (הקישור בין SiteBlocks ל־Postgres אמור לעשות זאת).
