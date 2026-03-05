@@ -6,6 +6,7 @@ use App\Filament\Resources\SiteResource\Pages;
 use App\Models\Site;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
@@ -82,20 +83,32 @@ class SiteResource extends Resource
     {
         return $infolist
             ->schema([
-                TextEntry::make('name'),
-                TextEntry::make('primary_domain'),
-                TextEntry::make('site_key')->copyable()->fontFamily('mono'),
-                TextEntry::make('status'),
-                TextEntry::make('embed_snippet')
-                    ->label('Embed snippet')
-                    ->state(function (Site $record): string {
-                        $url = rtrim(config('app.url'), '/').'/embed.js?site='.urlencode($record->site_key);
+                InfolistSection::make('Embed script – copy and paste into your site')
+                    ->description('Add this single script tag to your site (e.g. in the <head> or before </body>). It loads the widget for the domains you set in Allowed domains.')
+                    ->schema([
+                        TextEntry::make('embed_snippet')
+                            ->label('Script to embed')
+                            ->state(function (Site $record): string {
+                                $url = rtrim(config('app.url'), '/').'/embed.js?site='.urlencode($record->site_key);
 
-                        return '<script async src="'.$url.'"></script>';
-                    })
-                    ->html()
-                    ->copyable()
-                    ->copyMessage('Snippet copied'),
+                                return '<script async src="'.$url.'"></script>';
+                            })
+                            ->copyable()
+                            ->copyMessage('Copied! Paste this into your site.')
+                            ->fontFamily('mono')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible(false)
+                    ->columns(1),
+                InfolistSection::make('Site details')
+                    ->schema([
+                        TextEntry::make('name'),
+                        TextEntry::make('primary_domain'),
+                        TextEntry::make('site_key')->copyable()->fontFamily('mono'),
+                        TextEntry::make('status'),
+                    ])
+                    ->columns(2)
+                    ->collapsible(),
             ]);
     }
 

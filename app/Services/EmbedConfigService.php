@@ -9,7 +9,7 @@ class EmbedConfigService
 {
     private const CACHE_KEY_PREFIX = 'embed_config:';
 
-    private const CACHE_TTL_SECONDS = 60;
+    private const CACHE_TTL_SECONDS = 300;
 
     /**
      * Build the public config array for a site (active blocks only, with id, type, settings, display_rules).
