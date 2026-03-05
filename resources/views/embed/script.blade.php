@@ -14,6 +14,11 @@
   const siteKey = params.get('site') || params.get('site_key');
   const debugMode = params.get('debug') === '1' || params.get('debug') === 'true';
 
+  /** Expose load state so you can check in console: e.g. window.SiteBlocks */
+  if (typeof window !== 'undefined') {
+    window.SiteBlocks = { loaded: true, siteKey: siteKey || null, debug: debugMode };
+  }
+
   function log() {
     if (debugMode && typeof console !== 'undefined' && console.log) {
       console.log.apply(console, ['[Embed]'].concat(Array.prototype.slice.call(arguments)));
@@ -68,6 +73,7 @@
       log('Missing site key in script URL (?site=...)');
       return;
     }
+    log('Embed loaded for site:', siteKey);
     const configUrl = EMBED_BASE + CONFIG_PATH + '/' + encodeURIComponent(siteKey) + '/config';
     log('Fetching config:', configUrl);
 
