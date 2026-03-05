@@ -72,3 +72,27 @@ Use Railway's shell or a one-off run. Do not run migrations in the build phase.
 
 4. **Variables**  
    Confirm `RAILPACK_PHP_EXTENSIONS=intl,zip`, `APP_KEY`, `APP_ENV=production`, `DATABASE_URL` (or `DB_*`) are set. Missing vars can cause boot failure and 502.
+
+---
+
+## 500 Internal Server Error – troubleshooting
+
+1. **See the real error**  
+   In Railway **Deployments → View Logs**, check the **runtime** logs when you open the site. The 500 response is usually logged with the PHP exception (e.g. missing `APP_KEY`, database connection failed, table not found).
+
+2. **Check these variables**  
+   - `APP_KEY` – must be set (e.g. from `php artisan key:generate`).  
+   - `DATABASE_URL` – must point to your Postgres and be correct.  
+   - `APP_URL` – e.g. `https://siteblocks-production.up.railway.app`.
+
+3. **Migrations**  
+   If the error mentions "sessions" or "table not found", run:
+   ```bash
+   php artisan migrate --force
+   ```
+   (via Railway Shell or one-off command). The default session driver is `database`; the `sessions` table must exist.
+
+4. **Test without session/views**  
+   Open: `https://your-app.up.railway.app/api/ping`  
+   - If you get `{"ok":true}` → the app boots; the 500 is likely from the main page (session, DB, or view).  
+   - If `/api/ping` also returns 500 → the error is in bootstrap (env, config, or DB connection in a service provider).

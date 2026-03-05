@@ -59,6 +59,22 @@ class SiteResource extends Resource
                     ->content(fn (?Site $record): string => $record ? '••••••••' : '—')
                     ->helperText('Stored securely; never expose in the embed script.')
                     ->visible(fn (?Site $record): bool => (bool) $record),
+                Forms\Components\Section::make('Embed snippet')
+                    ->description('Copy this script and add it to your site (e.g. before </body>).')
+                    ->schema([
+                        Forms\Components\Placeholder::make('embed_snippet_form')
+                            ->label('Script to embed')
+                            ->content(function (?Site $record): string {
+                                if (! $record) {
+                                    return 'Save the site first to see the snippet.';
+                                }
+                                $url = rtrim(config('app.url'), '/').'/embed.js?site='.urlencode($record->site_key);
+                                return e('<script async src="'.$url.'"></script>');
+                            })
+                            ->visible(fn (?Site $record): bool => (bool) $record),
+                    ])
+                    ->visible(fn (?Site $record): bool => (bool) $record)
+                    ->collapsible(),
             ]);
     }
 
