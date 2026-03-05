@@ -21,6 +21,7 @@ class AddToCartCount extends Model
         'scope',
         'product_id',
         'variant_id',
+        'product_slug',
         'count',
     ];
 

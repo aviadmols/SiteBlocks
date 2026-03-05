@@ -162,6 +162,16 @@
       return input ? String(input.value).trim() : null;
     }
 
+    function getProductSlug() {
+      try {
+        if (typeof location !== 'undefined' && location.pathname) {
+          const m = location.pathname.match(/\/products\/([^/]+)/);
+          return m ? m[1] : null;
+        }
+      } catch (e) {}
+      return null;
+    }
+
     function getIds() {
       const productId = getProductId();
       const form = document.querySelector('form[action*="/cart/add"]');
@@ -173,7 +183,7 @@
     }
 
     function buildCountUrl(ids) {
-      const u = apiBase + SHOPIFY_COUNT_PATH + '?site_key=' + encodeURIComponent(siteKey);
+      let u = apiBase + SHOPIFY_COUNT_PATH + '?site_key=' + encodeURIComponent(siteKey);
       if (ids.productId) u += '&product_id=' + encodeURIComponent(ids.productId);
       if (ids.variantId) u += '&variant_id=' + encodeURIComponent(ids.variantId);
       return u;
@@ -238,7 +248,8 @@
         block_id: block.id,
         product_id: ids.productId || null,
         variant_id: ids.variantId || null,
-        page_url: pageUrl || (typeof location !== 'undefined' ? location.href : '')
+        page_url: pageUrl || (typeof location !== 'undefined' ? location.href : ''),
+        product_slug: getProductSlug() || null
       };
       fetch(apiBase + SHOPIFY_ADD_TO_CART_PATH, {
         method: 'POST',

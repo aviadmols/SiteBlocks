@@ -58,6 +58,7 @@ class ShopifyAddToCartController extends Controller
             'product_id' => ['nullable', 'string', 'max:64'],
             'variant_id' => ['nullable', 'string', 'max:64'],
             'page_url' => ['required', 'string', 'max:2048'],
+            'product_slug' => ['nullable', 'string', 'max:255'],
         ]);
 
         $site = Site::where('site_key', $validated['site_key'])
@@ -89,7 +90,8 @@ class ShopifyAddToCartController extends Controller
             $scope,
             $productId,
             $variantId,
-            $validated['page_url']
+            $validated['page_url'],
+            $validated['product_slug'] ?? null
         );
 
         return response()->json(['count' => $count]);

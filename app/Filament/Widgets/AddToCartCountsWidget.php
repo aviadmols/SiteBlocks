@@ -30,6 +30,7 @@ class AddToCartCountsWidget extends BaseWidget
             ->columns([
                 TextColumn::make('site.name')->label('Site'),
                 TextColumn::make('scope')->badge(),
+                TextColumn::make('product_slug')->label('Product slug')->placeholder('—'),
                 TextColumn::make('product_id')->label('Product ID')->placeholder('—'),
                 TextColumn::make('variant_id')->label('Variant ID')->placeholder('—'),
                 TextColumn::make('count')->sortable(),

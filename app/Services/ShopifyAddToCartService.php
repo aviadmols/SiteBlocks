@@ -35,12 +35,14 @@ class ShopifyAddToCartService
         string $scope,
         ?string $productId,
         ?string $variantId,
-        string $pageUrl
+        string $pageUrl,
+        ?string $productSlug = null
     ): int {
         $productId = $productId !== null && $productId !== '' ? (string) $productId : null;
         $variantId = $variantId !== null && $variantId !== '' ? (string) $variantId : null;
+        $productSlug = $productSlug !== null && $productSlug !== '' ? (string) $productSlug : null;
 
-        return (int) DB::transaction(function () use ($site, $blockId, $scope, $productId, $variantId, $pageUrl) {
+        return (int) DB::transaction(function () use ($site, $blockId, $scope, $productId, $variantId, $pageUrl, $productSlug) {
             $record = AddToCartCount::where('site_id', $site->id)
                 ->where('scope', $scope)
                 ->where('product_id', $productId)
@@ -50,6 +52,10 @@ class ShopifyAddToCartService
 
             if ($record) {
                 $record->increment('count');
+                if ($productSlug !== null) {
+                    $record->update(['product_slug' => $productSlug]);
+                }
+
                 return $record->fresh()->count;
             }
 
@@ -58,6 +64,7 @@ class ShopifyAddToCartService
                 'scope' => $scope,
                 'product_id' => $productId,
                 'variant_id' => $variantId,
+                'product_slug' => $productSlug,
                 'count' => 1,
             ]);
 
