@@ -22,7 +22,7 @@
 
 | Variable                  | Value    | Description |
 |---------------------------|----------|-------------|
-| `RAILPACK_PHP_EXTENSIONS` | `intl,zip` | הרחבות PHP לבנייה. בלי זה ה־build נכשל. |
+| `RAILPACK_PHP_EXTENSIONS` | `intl,zip,pdo_pgsql` | הרחבות PHP: intl, zip ל־Filament; **pdo_pgsql** לחיבור ל־PostgreSQL. בלי pdo_pgsql תקבל "could not find driver" בהרצת migrate. |
 
 ## אופציונלי
 
@@ -52,14 +52,53 @@
 
 ## אחרי דיפלוי ראשון – חובה
 
-אחרי שהאפליקציה עולה, הרץ **פעם אחת** ב־Shell של שירות האפליקציה (Railway → Service → Shell):
+אחרי שהאפליקציה עולה, הרץ **פעם אחת** ב־Shell של שירות האפליקציה (Railway → Service → Shell).
 
-```bash
-php artisan migrate --force
-php artisan db:seed
-```
+**חשוב:** הרץ **פקודה אחת בכל פעם** (לא להדביק את שתיהן יחד):
+
+1. הרץ והמתן לסיום:
+   ```bash
+   php artisan migrate --force
+   ```
+2. אחרי שהפקודה מסתיימת, הרץ:
+   ```bash
+   php artisan db:seed
+   ```
+
+אם תדביק את שתי השורות יחד, Railway עלול להעביר "php" כארגומנט ל־migrate ותקבל: `No arguments expected for "migrate" command, got "php"`.
 
 - **בלי מיגרציות** – טבלאות `users` ו־`sessions` לא קיימות → דפי web (login, דף הבית) מחזירים **500**.
 - **בלי seed** – אין משתמש להתחברות (למשל `aviadmols@gmail.com` / `987654321`).
 
 אחרי `migrate` ו־`db:seed` דפי login ושאר האפליקציה אמורים לעבוד.
+
+---
+
+## 500 אחרי שליחת הלוגין (בפופאפ)
+
+אם **דף הלוגין נטען** אבל אחרי הזנת אימייל וסיסמה ולחיצה על Sign in מופיע **500 Server Error** – הסיבה כמעט תמיד היא שבשרת **לא הורצו מיגרציות ו/או סידר**.
+
+בשליחת הטופס האפליקציה מחפשת את המשתמש בטבלת `users`. אם הטבלה לא קיימת או שהמשתמש לא נוצר → מתקבלת שגיאת 500.
+
+**פתרון:** ב־Railway עבור **שירות האפליקציה (Laravel)** (לא שירות Postgres):
+
+1. **Settings** או **Shell** → פתח Shell של השירות.
+2. הרץ **פקודה אחת**, חכה שתסתיים, ואז הרץ את השנייה:
+   - קודם: `php artisan migrate --force`
+   - אחר כך: `php artisan db:seed`
+3. נסה שוב להתחבר עם `aviadmols@gmail.com` / `987654321`.
+
+אם עדיין 500 – ב־**Deployments → View Logs** (לוגים בזמן ריצה) תופיע השגיאה המדויקת (למשל חיבור DB נכשל – אז וודא `DB_CONNECTION=pgsql` ו־`DATABASE_URL` בשירות האפליקציה).
+
+---
+
+## "could not find driver" בהרצת migrate
+
+אם בהרצת `php artisan migrate --force` מתקבלת השגיאה **could not find driver (Connection: sqlite, SQL: ... pg_class ...)**:
+
+1. **הוסף את הרחבת PostgreSQL ל־PHP:** בשירות האפליקציה הגדר:
+   - `RAILPACK_PHP_EXTENSIONS` = `intl,zip,pdo_pgsql`
+   (בלי `pdo_pgsql` ל־PHP אין דרייבר ל־PostgreSQL.)
+2. **בצע Redeploy** כדי שה־build ירוץ מחדש עם ההרחבה.
+3. וודא ש־**DB_CONNECTION=pgsql** ו־**DATABASE_URL** מוגדרים באותו שירות (כך שגם ב־Shell הפקודה migrate תשתמש ב־Postgres).
+4. הרץ שוב: `php artisan migrate --force`, ואז `php artisan db:seed`.

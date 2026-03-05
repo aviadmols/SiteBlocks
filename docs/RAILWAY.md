@@ -3,10 +3,10 @@
 ## PHP requirements
 
 - **PHP:** 8.2 (locked in `composer.json` platform so the lock file is compatible).
-- **Extensions:** `intl` and `zip` are required (Filament/OpenSpout). **You must set this in Railway:**
+- **Extensions:** `intl`, `zip`, and `pdo_pgsql` are required (Filament/OpenSpout + PostgreSQL). **You must set this in Railway:**
   - **Variable:** `RAILPACK_PHP_EXTENSIONS`
-  - **Value:** `intl,zip`
-  - Without this, the build will fail with "ext-intl is missing" / "ext-zip is missing".
+  - **Value:** `intl,zip,pdo_pgsql`
+  - Without `intl`/`zip`, the build fails; without `pdo_pgsql`, `php artisan migrate` fails with "could not find driver".
 
 ## Build
 
@@ -38,7 +38,7 @@ For the **full list and explanations** (including Postgres vs App service), see 
 
 | Variable                   | Required | Description |
 |----------------------------|----------|-------------|
-| `RAILPACK_PHP_EXTENSIONS`  | **Yes**  | Set to `intl,zip` so the build installs these PHP extensions. |
+| `RAILPACK_PHP_EXTENSIONS`  | **Yes**  | Set to `intl,zip,pdo_pgsql` (PostgreSQL driver required for migrate and DB). |
 | `APP_KEY`                  | Yes      | Run `php artisan key:generate` locally and set, or use Railway’s generate. |
 | `APP_ENV`       | Yes      | `production` |
 | `APP_DEBUG`     | Yes      | `false` |
