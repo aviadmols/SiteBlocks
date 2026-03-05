@@ -11,7 +11,6 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class Analytics extends Page implements HasTable
 {
@@ -49,8 +48,9 @@ class Analytics extends Page implements HasTable
             ])
             ->filters([
                 SelectFilter::make('site_id')
-                    ->relationship('site', 'name', fn (Builder $q) => $q->where('user_id', auth()->id()))
-                    ->label('Site'),
+                    ->label('Site')
+                    ->options(fn (): array => Site::where('user_id', auth()->id())->orderBy('name')->pluck('name', 'id')->toArray())
+                    ->searchable(),
                 SelectFilter::make('event_name')
                     ->options([
                         Event::EVENT_IMPRESSION => 'Impression',

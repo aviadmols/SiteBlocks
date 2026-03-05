@@ -18,18 +18,22 @@ class BlockResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-puzzle-piece';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Embed';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static ?string $modelLabel = 'Block';
+
+    protected static ?string $pluralModelLabel = 'Blocks';
+
+    protected static ?string $navigationLabel = 'Blocks (widgets)';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Select::make('site_id')
-                    ->relationship(
-                        name: 'site',
-                        titleAttribute: 'name',
-                        modifyQueryUsing: fn (Builder $q) => $q->where('user_id', auth()->id())
-                    )
+                    ->options(fn (): array => Site::where('user_id', auth()->id())->orderBy('name')->pluck('name', 'id')->toArray())
                     ->required()
                     ->searchable()
                     ->preload(),
@@ -140,7 +144,9 @@ class BlockResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('site_id')
-                    ->relationship('site', 'name', fn (Builder $q) => $q->where('user_id', auth()->id())),
+                    ->label('Site')
+                    ->options(fn (): array => Site::where('user_id', auth()->id())->orderBy('name')->pluck('name', 'id')->toArray())
+                    ->searchable(),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         Block::STATUS_ACTIVE => 'Active',

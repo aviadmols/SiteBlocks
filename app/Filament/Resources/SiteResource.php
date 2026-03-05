@@ -19,7 +19,15 @@ class SiteResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Embed';
+
+    protected static ?int $navigationSort = 1;
+
+    protected static ?string $modelLabel = 'Site';
+
+    protected static ?string $pluralModelLabel = 'Sites';
+
+    protected static ?string $navigationLabel = 'Sites (domain & script)';
 
     public static function form(Form $form): Form
     {
