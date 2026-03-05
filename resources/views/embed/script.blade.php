@@ -138,7 +138,7 @@
     const settings = block.settings || {};
     const targetSelector = settings.target_selector || '[data-product-form], form[action*="/cart/add"]';
     const insertPosition = settings.insert_position || 'after';
-    const messageTemplate = settings.message_template || 'This product was added to cart {{count}} times';
+    const messageTemplate = settings.message_template || 'This product was added to cart @{{ count }} times';
     const messageClass = settings.message_class || 'embed-add-to-cart-count';
     const minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 0;
     const countScope = settings.count_scope || 'variant';
