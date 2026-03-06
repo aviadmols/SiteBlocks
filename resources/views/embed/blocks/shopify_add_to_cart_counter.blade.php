@@ -14,9 +14,15 @@
     var insertPosition = settings.insert_position || 'after';
     var messageTemplate = settings.message_template || 'This product was added to cart @{{ count }} times';
     var messageClass = settings.message_class || 'embed-add-to-cart-count';
-    var minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 1;
+    var minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 0;
     var countScope = settings.count_scope || 'variant';
     var apiBase = EMBED_BASE;
+    var debug = !!(settings.debug || (siteBlocks && siteBlocks.debug));
+    function log() {
+      if (debug && siteBlocks && typeof siteBlocks.log === 'function') {
+        siteBlocks.log.apply(siteBlocks, ['[AddToCartCounter]'].concat(Array.prototype.slice.call(arguments)));
+      }
+    }
 
     if (settings.custom_css && typeof document !== 'undefined' && document.head) {
       try {
@@ -31,7 +37,7 @@
       } catch (e) {}
     }
 
-    function getProductId() {
+    function getProductId(form) {
       try {
         if (typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product && window.ShopifyAnalytics.meta.product.id) {
           return String(window.ShopifyAnalytics.meta.product.id);
@@ -39,14 +45,36 @@
         if (typeof window.meta !== 'undefined' && window.meta && window.meta.product && window.meta.product.id) {
           return String(window.meta.product.id);
         }
+        if (typeof document !== 'undefined') {
+          var formEl = form || document.querySelector('form[action*="/cart/add"]');
+          if (formEl && formEl.getAttribute('data-product-id')) return String(formEl.getAttribute('data-product-id')).trim();
+          var dataEl = document.querySelector('[data-product-id]');
+          if (dataEl && dataEl.getAttribute('data-product-id')) return String(dataEl.getAttribute('data-product-id')).trim();
+          var jsonLd = document.querySelector('script[type="application/ld+json"]');
+          if (jsonLd && jsonLd.textContent) {
+            try {
+              var obj = JSON.parse(jsonLd.textContent);
+              var item = Array.isArray(obj) ? obj.find(function (x) { return x && x['@type'] === 'Product'; }) : (obj && obj['@type'] === 'Product' ? obj : null);
+              if (item && item['@id']) {
+                var match = String(item['@id']).match(/\/(\d+)$/);
+                if (match) return match[1];
+              }
+              if (item && item.productID) return String(item.productID);
+            } catch (e2) {}
+          }
+        }
       } catch (e) {}
       return null;
     }
 
     function getVariantIdFromForm(form) {
       if (!form) return null;
-      var input = form.querySelector('input[name="id"]');
-      return input ? String(input.value).trim() : null;
+      var input = form.querySelector('input[name="id"]') || form.querySelector('input[name="variant_id"]');
+      if (input && input.value) return String(input.value).trim();
+      if (form.getAttribute && form.getAttribute('data-variant-id')) return String(form.getAttribute('data-variant-id')).trim();
+      var dataEl = form.querySelector('[data-variant-id]');
+      if (dataEl && dataEl.getAttribute('data-variant-id')) return String(dataEl.getAttribute('data-variant-id')).trim();
+      return null;
     }
 
     function getProductSlug() {
@@ -59,10 +87,10 @@
       return null;
     }
 
-    function getIds() {
-      var productId = getProductId();
-      var form = document.querySelector('form[action*="/cart/add"]');
-      var variantId = getVariantIdFromForm(form);
+    function getIds(form) {
+      var formEl = form || document.querySelector('form[action*="/cart/add"]');
+      var productId = getProductId(formEl);
+      var variantId = getVariantIdFromForm(formEl);
       var scope = countScope === 'product' && productId ? 'product' : 'variant';
       var pid = scope === 'product' ? productId : null;
       var vid = scope === 'variant' ? (variantId || productId) : null;
@@ -112,11 +140,20 @@
 
     function fetchCountAndShow(anchor, messageEl) {
       var ids = getIds();
-      if (ids.scope === 'variant' && !ids.variantId) return;
-      if (ids.scope === 'product' && !ids.productId) return;
+      if (ids.scope === 'variant' && !ids.variantId) {
+        log('Missing variant id; not fetching count');
+        return;
+      }
+      if (ids.scope === 'product' && !ids.productId) {
+        log('Missing product id; not fetching count');
+        return;
+      }
 
       fetch(buildCountUrl(ids), { method: 'GET', credentials: 'omit' })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (!r.ok) throw new Error('count ' + r.status);
+          return r.json();
+        })
         .then(function (data) {
           var count = data && typeof data.count === 'number' ? data.count : 0;
           if (count >= minCountToShow) {
@@ -127,7 +164,9 @@
             updateDisplay(count, messageEl);
           }
         })
-        .catch(function () {});
+        .catch(function (err) {
+          log('GET count failed', err);
+        });
     }
 
     function incrementAndRefresh(ids, pageUrl) {
@@ -154,17 +193,36 @@
             if (!messageEl && anchor) {
               var newEl = renderMessage(count);
               placeMessage(newEl, anchor);
-            } else {
+            } else if (messageEl) {
               updateDisplay(count, messageEl);
             }
           }
         })
-        .catch(function () {});
+        .catch(function (err) {
+          log('POST add-to-cart failed', err);
+        });
     }
 
     var anchor = document.querySelector(targetSelector);
+    if (!anchor) log('Anchor not found:', targetSelector);
     if (anchor) {
+      var form = anchor.tagName === 'FORM' ? anchor : (anchor.querySelector && anchor.querySelector('form[action*="/cart/add"]'));
+      if (form && !form.getAttribute('data-embed-add-to-cart-submit')) {
+        form.setAttribute('data-embed-add-to-cart-submit', '1');
+        form.addEventListener('submit', function () {
+          var ids = getIds(form);
+          if (ids.variantId || ids.productId) incrementAndRefresh(ids, typeof location !== 'undefined' ? location.href : '');
+        });
+      }
       fetchCountAndShow(anchor, null);
+      setTimeout(function () {
+        var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
+        fetchCountAndShow(anchor, messageEl);
+      }, 300);
+      setTimeout(function () {
+        var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
+        fetchCountAndShow(anchor, messageEl);
+      }, 800);
     }
 
     var origFetch = window.fetch;

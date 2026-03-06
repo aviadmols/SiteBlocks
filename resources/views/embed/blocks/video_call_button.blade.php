@@ -44,11 +44,24 @@
           var p = window.ShopifyAnalytics.meta.product;
           if (p.title) out.product_title = String(p.title);
           if (p.price !== undefined) out.product_price = String(p.price);
+          if (!out.product_price && p.variants && p.variants[0] && p.variants[0].price !== undefined) out.product_price = String(p.variants[0].price);
         }
         if (typeof window.meta !== 'undefined' && window.meta && window.meta.product) {
           var q = window.meta.product;
           if (q.title) out.product_title = out.product_title || String(q.title);
           if (q.price !== undefined) out.product_price = out.product_price || String(q.price);
+        }
+        if (!out.product_title && typeof document !== 'undefined') {
+          var og = document.querySelector('meta[property="og:title"]');
+          if (og && og.getAttribute('content')) out.product_title = og.getAttribute('content').trim();
+          if (!out.product_title) {
+            var h1 = document.querySelector('h1, [class*="product"][class*="title"], .product__title, .product-title');
+            if (h1 && h1.textContent) out.product_title = h1.textContent.trim();
+          }
+        }
+        if (!out.product_price && typeof document !== 'undefined') {
+          var priceEl = document.querySelector('[class*="price"]:not([class*="compare"]), .product__price, .product-price, [data-product-price]');
+          if (priceEl && priceEl.textContent) out.product_price = priceEl.textContent.replace(/\s+/g, ' ').trim();
         }
       } catch (e) {}
       return out;
