@@ -28,7 +28,7 @@
 
 | Variable          | Value       | Description |
 |-------------------|-------------|-------------|
-| `SESSION_DRIVER`  | *(לא חובה)* | ב־production ברירת המחדל היא `file` – דף הלוגין והאפליקציה עולים גם בלי טבלת sessions. אחרי הרצת `migrate` אפשר להגדיר `SESSION_DRIVER=database` ל־sessions קבועים. |
+| `SESSION_DRIVER`  | *(לא חובה)* | ברירת המחדל היא `database` – ה־sessions נשמרים ב־PostgreSQL ולכן **לא מתנתקים אחרי כל deploy** (בניגוד ל־`file` שב־Railway נמחק בכל עדכון). דרושה טבלת `sessions` (נוצרת ב־migrate). |
 
 ---
 
@@ -89,6 +89,23 @@
 3. נסה שוב להתחבר עם `aviadmols@gmail.com` / `987654321`.
 
 אם עדיין 500 – ב־**Deployments → View Logs** (לוגים בזמן ריצה) תופיע השגיאה המדויקת (למשל חיבור DB נכשל – אז וודא `DB_CONNECTION=pgsql` ו־`DATABASE_URL` בשירות האפליקציה).
+
+---
+
+## לא מצליח להתחבר (These credentials do not match our records)
+
+אם דף הלוגין עובד אבל האימייל/סיסמה נדחים:
+
+1. **יצירת/עדכון המשתמש:** ב־Shell של שירות האפליקציה הרץ:
+   ```bash
+   php artisan tinker
+   ```
+   ואז בשורה אחת (העתק והדבק):
+   ```php
+   \App\Models\User::updateOrCreate(['email' => 'aviadmols@gmail.com'], ['name' => 'Aviad', 'password' => bcrypt('987654321')]);
+   ```
+   סיום: הקלד `exit` ולחץ Enter.
+2. **או הרצת הסידר מחדש:** `php artisan db:seed` (יוצר/מעדכן את המשתמש aviadmols@gmail.com עם הסיסמה 987654321).
 
 ---
 

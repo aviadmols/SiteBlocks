@@ -69,7 +69,7 @@ class SiteResource extends Resource
                                 if (! $record) {
                                     return 'Save the site first to see the snippet.';
                                 }
-                                $baseUrl = rtrim(request()->getSchemeAndHttpHost() ?: config('app.url'), '/');
+                                $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
                                 $url = $baseUrl.'/embed.js?site='.urlencode($record->site_key);
                                 return e('<script async src="'.$url.'"></script>');
                             })
@@ -90,7 +90,7 @@ class SiteResource extends Resource
                         TextEntry::make('embed_snippet')
                             ->label('Script to embed')
                             ->state(function (Site $record): string {
-                                $baseUrl = rtrim(request()->getSchemeAndHttpHost() ?: config('app.url'), '/');
+                                $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
                                 $url = $baseUrl.'/embed.js?site='.urlencode($record->site_key);
 
                                 return '<script async src="'.$url.'"></script>';

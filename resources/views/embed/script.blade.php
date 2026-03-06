@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const EMBED_BASE = @json($embedBaseUrl);
+  const EMBED_BASE_SERVER = @json($embedBaseUrl);
   const CONFIG_PATH = '/api/public/sites';
   const EVENTS_PATH = '/api/public/events';
   const SHOPIFY_COUNT_PATH = '/api/public/shopify/count';
@@ -9,6 +9,15 @@
 
   const scriptEl = document.currentScript;
   const scriptSrc = scriptEl && scriptEl.src ? scriptEl.src : '';
+  /** Use script origin so embed works even when snippet was copied from localhost; API base is always where the script was loaded from. */
+  let EMBED_BASE = EMBED_BASE_SERVER;
+  try {
+    if (scriptSrc && typeof URL !== 'undefined') {
+      var _u = new URL(scriptSrc, typeof location !== 'undefined' ? location.href : 'https://example.com');
+      EMBED_BASE = _u.origin;
+    }
+  } catch (e) {}
+
   const queryString = scriptSrc.indexOf('?') >= 0 ? scriptSrc.split('?')[1] || '' : '';
   const params = new URLSearchParams(queryString);
   const siteKey = params.get('site') || params.get('site_key');
