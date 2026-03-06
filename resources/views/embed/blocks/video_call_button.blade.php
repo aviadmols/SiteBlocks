@@ -52,16 +52,20 @@
           if (q.price !== undefined) out.product_price = out.product_price || String(q.price);
         }
         if (!out.product_title && typeof document !== 'undefined') {
-          var og = document.querySelector('meta[property="og:title"]');
-          if (og && og.getAttribute('content')) out.product_title = og.getAttribute('content').trim();
+          var ogTitle = document.querySelector('meta[property="og:title"]');
+          if (ogTitle && ogTitle.getAttribute('content')) out.product_title = ogTitle.getAttribute('content').trim();
           if (!out.product_title) {
             var h1 = document.querySelector('h1, [class*="product"][class*="title"], .product__title, .product-title');
             if (h1 && h1.textContent) out.product_title = h1.textContent.trim();
           }
         }
         if (!out.product_price && typeof document !== 'undefined') {
-          var priceEl = document.querySelector('[class*="price"]:not([class*="compare"]), .product__price, .product-price, [data-product-price]');
-          if (priceEl && priceEl.textContent) out.product_price = priceEl.textContent.replace(/\s+/g, ' ').trim();
+          var priceMeta = document.querySelector('meta[property="product:price:amount"]');
+          if (priceMeta && priceMeta.getAttribute('content')) out.product_price = priceMeta.getAttribute('content').trim();
+          if (!out.product_price) {
+            var priceEl = document.querySelector('[class*="price"]:not([class*="compare"]), .product__price, .product-price, [data-product-price]');
+            if (priceEl && priceEl.textContent) out.product_price = priceEl.textContent.replace(/\s+/g, ' ').trim();
+          }
         }
       } catch (e) {}
       return out;

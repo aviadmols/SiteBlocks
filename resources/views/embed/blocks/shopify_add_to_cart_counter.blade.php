@@ -223,6 +223,10 @@
         var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
         fetchCountAndShow(anchor, messageEl);
       }, 800);
+      setTimeout(function () {
+        var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
+        fetchCountAndShow(anchor, messageEl);
+      }, 1500);
     }
 
     var origFetch = window.fetch;
