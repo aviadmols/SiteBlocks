@@ -149,9 +149,22 @@
     const insertPosition = settings.insert_position || 'after';
     const messageTemplate = settings.message_template || 'This product was added to cart @{{ count }} times';
     const messageClass = settings.message_class || 'embed-add-to-cart-count';
-    const minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 0;
+    const minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 1;
     const countScope = settings.count_scope || 'variant';
     const apiBase = EMBED_BASE;
+
+    if (settings.custom_css && typeof document !== 'undefined' && document.head) {
+      try {
+        var styleId = 'data-embed-block-style-' + String(block.id);
+        if (!document.getElementById(styleId)) {
+          var styleEl = document.createElement('style');
+          styleEl.id = styleId;
+          styleEl.setAttribute('data-embed-block-id', String(block.id));
+          styleEl.textContent = String(settings.custom_css);
+          document.head.appendChild(styleEl);
+        }
+      } catch (e) {}
+    }
 
     function getProductId() {
       try {
@@ -193,6 +206,7 @@
 
     function buildCountUrl(ids) {
       let u = apiBase + SHOPIFY_COUNT_PATH + '?site_key=' + encodeURIComponent(siteKey);
+      if (block.id != null) u += '&block_id=' + encodeURIComponent(String(block.id));
       if (ids.productId) u += '&product_id=' + encodeURIComponent(ids.productId);
       if (ids.variantId) u += '&variant_id=' + encodeURIComponent(ids.variantId);
       return u;
@@ -316,6 +330,7 @@
   }
 
   blockRegistry.shopify_add_to_cart_counter = runShopifyAddToCartCounter;
+  @include('embed.blocks.video_call_button')
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadAndRun);

@@ -43,6 +43,7 @@ class BlockResource extends Resource
                 Forms\Components\Select::make('type')
                     ->options([
                         Block::TYPE_SHOPIFY_ADD_TO_CART_COUNTER => 'Shopify Add To Cart Counter',
+                        Block::TYPE_VIDEO_CALL_BUTTON => 'Video Call (WhatsApp) Button',
                     ])
                     ->required()
                     ->live()
@@ -58,7 +59,7 @@ class BlockResource extends Resource
                     ->schema(fn (Forms\Get $get): array => static::getSettingsSchemaForType($get('type')))
                     ->visible(fn (Forms\Get $get): bool => (bool) $get('type')),
                 Forms\Components\Section::make('Display rules (when to show)')
-                    ->description('Optional: show block only on certain URLs or page types.')
+                    ->description('General: optional rules for when this block is shown (URL, page type). Applies to all block types.')
                     ->schema([
                         Forms\Components\KeyValue::make('display_rules.url_param')
                             ->label('URL parameter (e.g. show=1)')
@@ -81,6 +82,22 @@ class BlockResource extends Resource
                     ])
                     ->collapsed(),
             ]);
+    }
+
+    /**
+     * Common settings shared by all block types (e.g. Custom CSS). Use spread when building type schema.
+     *
+     * @return list<\Filament\Forms\Components\Component>
+     */
+    protected static function getCommonBlockSettingsFields(string $placeholder = ''): array
+    {
+        return [
+            Forms\Components\Textarea::make('settings.custom_css')
+                ->label('Custom CSS')
+                ->placeholder($placeholder ?: '/* block-specific styles */')
+                ->rows(4)
+                ->columnSpanFull(),
+        ];
     }
 
     protected static function getSettingsSchemaForType(?string $type): array
@@ -111,7 +128,7 @@ class BlockResource extends Resource
                 Forms\Components\TextInput::make('settings.min_count_to_show')
                     ->label('Min count to show')
                     ->numeric()
-                    ->default(0),
+                    ->default(1),
                 Forms\Components\Select::make('settings.count_scope')
                     ->label('Count scope')
                     ->options([
@@ -122,6 +139,66 @@ class BlockResource extends Resource
                 Forms\Components\Toggle::make('settings.debug')
                     ->label('Debug (console logs)')
                     ->default(false),
+                ...static::getCommonBlockSettingsFields('.embed-add-to-cart-count { font-size: 14px; color: #333; }'),
+            ];
+        }
+
+        if ($type === Block::TYPE_VIDEO_CALL_BUTTON) {
+            return [
+                Forms\Components\TextInput::make('settings.phone')
+                    ->label('Phone (WhatsApp, with country code, no +)')
+                    ->placeholder('97239539683')
+                    ->required()
+                    ->maxLength(32),
+                Forms\Components\TextInput::make('settings.open_days')
+                    ->label('Open days (0=Sun, 5=Fri, comma-separated)')
+                    ->placeholder('0,1,2,3,4,5')
+                    ->default('0,1,2,3,4,5')
+                    ->maxLength(64),
+                Forms\Components\TextInput::make('settings.open_time')
+                    ->label('Open time (HH:MM)')
+                    ->placeholder('10:30')
+                    ->default('10:30')
+                    ->maxLength(8),
+                Forms\Components\TextInput::make('settings.close_time')
+                    ->label('Close time (HH:MM)')
+                    ->placeholder('18:00')
+                    ->default('18:00')
+                    ->maxLength(8),
+                Forms\Components\TextInput::make('settings.friday_close')
+                    ->label('Friday close time (HH:MM)')
+                    ->placeholder('14:00')
+                    ->default('14:00')
+                    ->maxLength(8),
+                Forms\Components\TextInput::make('settings.timezone')
+                    ->label('Timezone')
+                    ->placeholder('Asia/Jerusalem')
+                    ->default('Asia/Jerusalem')
+                    ->maxLength(64),
+                Forms\Components\TextInput::make('settings.button_text')
+                    ->label('Button text')
+                    ->default('התחל שיחת וידאו לצפייה במוצר')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('settings.target_selector')
+                    ->label('Target selector (where to insert the button)')
+                    ->placeholder('[data-product-form], .product-form')
+                    ->default('[data-product-form], form[action*="/cart/add"]')
+                    ->maxLength(255),
+                Forms\Components\Select::make('settings.insert_position')
+                    ->label('Insert position')
+                    ->options([
+                        'after' => 'After',
+                        'before' => 'Before',
+                        'append' => 'Append inside',
+                        'prepend' => 'Prepend inside',
+                    ])
+                    ->default('after'),
+                Forms\Components\Textarea::make('settings.message_template')
+                    ->label('WhatsApp message template (use {{product_title}}, {{product_price}}, {{product_url}})')
+                    ->placeholder('*התחלת שיחת וידאו:*\n*{{product_title}}*\n{{product_price}}\n\n{{product_url}}')
+                    ->rows(4)
+                    ->columnSpanFull(),
+                ...static::getCommonBlockSettingsFields('.embed-video-call-button__btn { font-size: 16px; }'),
             ];
         }
 
@@ -166,7 +243,10 @@ class BlockResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            \App\Filament\Resources\BlockResource\RelationManagers\EventsRelationManager::class,
+            \App\Filament\Resources\BlockResource\RelationManagers\AddToCartCountsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

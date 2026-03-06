@@ -18,6 +18,7 @@ class AddToCartCount extends Model
      */
     protected $fillable = [
         'site_id',
+        'block_id',
         'scope',
         'product_id',
         'variant_id',
@@ -31,5 +32,13 @@ class AddToCartCount extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Get the block that owns the count (optional; null for legacy site-level counts).
+     */
+    public function block(): BelongsTo
+    {
+        return $this->belongsTo(Block::class);
     }
 }

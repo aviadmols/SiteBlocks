@@ -13,6 +13,8 @@ class Block extends Model
 
     public const TYPE_SHOPIFY_ADD_TO_CART_COUNTER = 'shopify_add_to_cart_counter';
 
+    public const TYPE_VIDEO_CALL_BUTTON = 'video_call_button';
+
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_INACTIVE = 'inactive';
@@ -58,6 +60,14 @@ class Block extends Model
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);
+    }
+
+    /**
+     * Get the add-to-cart counts for this block (Shopify Add To Cart Counter).
+     */
+    public function addToCartCounts(): HasMany
+    {
+        return $this->hasMany(AddToCartCount::class);
     }
 
     /**

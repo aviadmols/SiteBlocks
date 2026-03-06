@@ -22,6 +22,7 @@ class ShopifyAddToCartController extends Controller
     {
         $validated = $request->validate([
             'site_key' => ['required', 'string', 'max:64'],
+            'block_id' => ['nullable', 'integer', 'exists:blocks,id'],
             'product_id' => ['nullable', 'string', 'max:64'],
             'variant_id' => ['nullable', 'string', 'max:64'],
         ]);
@@ -34,6 +35,11 @@ class ShopifyAddToCartController extends Controller
             return response()->json(['error' => 'Site not found or inactive'], 404);
         }
 
+        $blockId = isset($validated['block_id']) ? (int) $validated['block_id'] : null;
+        if ($blockId !== null && ! $site->blocks()->where('id', $blockId)->exists()) {
+            return response()->json(['error' => 'Block not found for this site'], 422);
+        }
+
         $productId = $validated['product_id'] ?? null;
         $variantId = $validated['variant_id'] ?? null;
 
@@ -42,7 +48,7 @@ class ShopifyAddToCartController extends Controller
             return response()->json(['error' => 'Provide product_id or variant_id'], 422);
         }
 
-        $count = $this->shopifyAddToCart->getCount($site, $scope, $productId, $variantId);
+        $count = $this->shopifyAddToCart->getCount($site, $scope, $productId, $variantId, $blockId);
 
         return response()->json(['count' => $count]);
     }
