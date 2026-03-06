@@ -234,6 +234,7 @@ class BlockResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
+            ->recordUrl(fn (Block $record): string => BlockResource::getUrl('view', ['record' => $record]))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

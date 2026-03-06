@@ -1,7 +1,9 @@
 {{--
   Video Call (WhatsApp) Button block runner.
   Injected into embed script; uses blockRegistry, EMBED_BASE, EVENTS_PATH, siteKey from parent scope.
+  @verbatim ensures {{ product_title }} etc. are output literally for the message template.
 --}}
+@verbatim
   /**
    * Video Call Button: business-hours badge (ONLINE/OFFLINE) and WhatsApp button with product context.
    * Tracks clicks via POST /api/public/events (event_name: click, payload: product_title, product_url, product_price).
@@ -167,3 +169,4 @@
   }
 
   blockRegistry.video_call_button = runVideoCallButton;
+@endverbatim

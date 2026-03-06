@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Embed script base URL
+    |--------------------------------------------------------------------------
+    |
+    | Optional. When set, the embed snippet in the admin uses this URL instead of
+    | APP_URL or the request host (e.g. set to your Railway URL when developing
+    | locally so the copied script points to production).
+    |
+    */
+
+    'embed_base_url' => env('EMBED_SCRIPT_BASE_URL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

@@ -20,7 +20,8 @@ class BlockPolicy
      */
     public function view(User $user, Block $block): bool
     {
-        return $user->id === $block->site->user_id;
+        $site = $block->site;
+        return $site && $user->id === $site->user_id;
     }
 
     /**
@@ -36,7 +37,8 @@ class BlockPolicy
      */
     public function update(User $user, Block $block): bool
     {
-        return $user->id === $block->site->user_id;
+        $site = $block->site;
+        return $site && $user->id === $site->user_id;
     }
 
     /**
@@ -44,6 +46,7 @@ class BlockPolicy
      */
     public function delete(User $user, Block $block): bool
     {
-        return $user->id === $block->site->user_id;
+        $site = $block->site;
+        return $site && $user->id === $site->user_id;
     }
 }

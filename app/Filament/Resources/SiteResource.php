@@ -69,7 +69,7 @@ class SiteResource extends Resource
                                 if (! $record) {
                                     return 'Save the site first to see the snippet.';
                                 }
-                                $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
+                                $baseUrl = rtrim(static::embedScriptBaseUrl(), '/');
                                 $url = $baseUrl.'/embed.js?site='.urlencode($record->site_key);
                                 return e('<script async src="'.$url.'"></script>');
                             })
@@ -90,7 +90,7 @@ class SiteResource extends Resource
                         TextEntry::make('embed_snippet')
                             ->label('Script to embed')
                             ->state(function (Site $record): string {
-                                $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
+                                $baseUrl = rtrim(static::embedScriptBaseUrl(), '/');
                                 $url = $baseUrl.'/embed.js?site='.urlencode($record->site_key);
 
                                 return '<script async src="'.$url.'"></script>';
@@ -159,6 +159,30 @@ class SiteResource extends Resource
             'view' => Pages\ViewSite::route('/{record}'),
             'edit' => Pages\EditSite::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Base URL for the embed script snippet (so the copied script points to the real app, not localhost).
+     * Uses EMBED_SCRIPT_BASE_URL if set; else request host when not localhost (e.g. Railway); else APP_URL.
+     */
+    public static function embedScriptBaseUrl(): string
+    {
+        $embedBase = rtrim((string) config('app.embed_base_url'), '/');
+        if ($embedBase !== '') {
+            return $embedBase;
+        }
+
+        $requestHost = request()->getSchemeAndHttpHost();
+        if ($requestHost && ! str_contains($requestHost, 'localhost')) {
+            return $requestHost;
+        }
+
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if ($appUrl !== '' && ! str_contains($appUrl, 'localhost')) {
+            return $appUrl;
+        }
+
+        return $requestHost ?: $appUrl ?: 'https://example.com';
     }
 
     public static function getEloquentQuery(): Builder
