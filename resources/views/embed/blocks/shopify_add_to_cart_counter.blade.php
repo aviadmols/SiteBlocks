@@ -215,18 +215,21 @@
         });
       }
       fetchCountAndShow(anchor, null);
-      setTimeout(function () {
+      var attempts = 0;
+      var maxAttempts = 15;
+      var intervalId = setInterval(function () {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          return;
+        }
         var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
-        fetchCountAndShow(anchor, messageEl);
-      }, 300);
-      setTimeout(function () {
-        var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
-        fetchCountAndShow(anchor, messageEl);
-      }, 800);
-      setTimeout(function () {
-        var messageEl = anchor.parentNode ? anchor.parentNode.querySelector('.' + messageClass) : null;
-        fetchCountAndShow(anchor, messageEl);
-      }, 1500);
+        var ids = getIds();
+        if (ids.variantId || ids.productId) {
+          fetchCountAndShow(anchor, messageEl);
+          clearInterval(intervalId);
+        }
+      }, 400);
     }
 
     var origFetch = window.fetch;
