@@ -261,7 +261,9 @@ class BlockResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->whereHas('site', fn (Builder $q) => $q->where('user_id', auth()->id()));
+        return parent::getEloquentQuery()
+            ->whereHas('site', fn (Builder $q) => $q->where('user_id', auth()->id()))
+            ->with('site:id,name');
     }
 
     public static function getPolicy(): ?string

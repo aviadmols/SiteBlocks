@@ -101,3 +101,31 @@ For the **full list and explanations** (including Postgres vs App service), see 
    Open: `https://your-app.up.railway.app/api/ping`  
    - If you get `{"ok":true}` → the app boots; the 500 is likely from the main page (session, DB, or view).  
    - If `/api/ping` also returns 500 → the error is in bootstrap (env, config, or DB connection in a service provider).
+
+---
+
+## Response time / slowness (e.g. spikes in the morning)
+
+If the site is slow at certain times (e.g. high p50/p99 response times in monitoring):
+
+1. **Cold start**  
+   After a deploy or when the service was idle, the first requests hit a fresh process: PHP boots, Laravel loads config and services. That can add several seconds.  
+   - **Mitigation:** Keep the service always-on (no scale-to-zero) if you need stable latency, or use a health-check URL that gets hit regularly so the process stays warm.
+
+2. **Procfile runs `config:clear`**  
+   The Procfile runs `php artisan config:clear` before `serve`, so at runtime Laravel does not use a cached config file. The app still loads config once per process; the main cost is on the **first request** after a restart.  
+   - **Mitigation:** If you can run `config:cache` **after** env is available (e.g. in a start script that runs after Railway injects `DATABASE_URL`), you can cache config for that run. The current setup uses `config:clear` so the app reads `DATABASE_URL` at runtime and avoids wrong DB at build time.
+
+3. **Session driver = database**  
+   With `SESSION_DRIVER=database` (default), every request does at least one read and one write to the `sessions` table. If the DB is slow or far (network latency), that adds up.  
+   - **Mitigation:** For the embed script and public API, those routes can use a different guard or no session. The admin (Filament) needs session; keeping database session is fine if the DB is fast. If you add Redis, `SESSION_DRIVER=redis` and `CACHE_STORE=redis` can reduce DB load and latency.
+
+4. **N+1 queries in Filament**  
+   List pages that show related data (e.g. Block list with `site.name`) must eager-load relations so each row doesn’t trigger an extra query.  
+   - **Mitigation:** Already done: `BlockResource::getEloquentQuery()` uses `->with('site:id,name')`. Other resources that show relations in the table should use `->with('relation')` in their base query.
+
+5. **Config endpoint for embed**  
+   The public config endpoint (`/api/public/config/{site_key}`) is cached in the app (e.g. 5 minutes) and returns `Cache-Control` and `ETag`, so repeat requests are cheap. No change needed unless you shorten TTL or add more blocks per site.
+
+6. **Database and plan**  
+   On Railway, DB and app can share the same region; if the DB plan is small or under load, slow queries will increase response time. Check DB metrics and consider indexing (e.g. on `sessions` and on foreign keys used in list filters).
