@@ -28,6 +28,22 @@
     window.SiteBlocks = { loaded: true, siteKey: siteKey || null, debug: debugMode };
   }
 
+  /** Show debug badge as soon as script runs (so we know the file loaded). Uses documentElement so it works before body exists. */
+  if (debugMode && typeof document !== 'undefined') {
+    try {
+      var earlyId = 'siteblocks-debug-badge';
+      var earlyEl = document.getElementById(earlyId);
+      if (!earlyEl) {
+        earlyEl = document.createElement('div');
+        earlyEl.id = earlyId;
+        earlyEl.setAttribute('data-embed', 'siteblocks');
+        earlyEl.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:999999;background:#111;color:#0f0;font:12px monospace;padding:8px 12px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);max-width:280px;';
+        (document.body || document.documentElement).appendChild(earlyEl);
+      }
+      earlyEl.textContent = 'SiteBlocks: script loaded, waiting for DOM…';
+    } catch (e) {}
+  }
+
   /** Show a visible badge on the page when debug=1 so you can see the script loaded without opening console */
   function showDebugBadge(text) {
     if (!debugMode || typeof document === 'undefined') return;
@@ -131,7 +147,7 @@
       })
       .catch(function (err) {
         log('Config fetch error', err);
-        showDebugBadge('SiteBlocks: config error (check console)');
+        showDebugBadge('SiteBlocks: config failed (CORS? 404? open F12 → Network & Console)');
       });
   }
 
