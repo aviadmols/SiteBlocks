@@ -23,10 +23,10 @@
   const siteKey = params.get('site') || params.get('site_key');
   const debugMode = params.get('debug') === '1' || params.get('debug') === 'true';
 
-  /** Expose load state so you can check in console: e.g. window.SiteBlocks */
-  if (typeof window !== 'undefined') {
-    window.SiteBlocks = { loaded: true, siteKey: siteKey || null, debug: debugMode };
-  }
+  /**
+   * Block registry: type -> function(blockConfig, siteKey). Block scripts register here via window.SiteBlocks.blockRegistry.
+   */
+  const blockRegistry = {};
 
   /** Show debug badge as soon as script runs (so we know the file loaded). Uses documentElement so it works before body exists. */
   if (debugMode && typeof document !== 'undefined') {
@@ -63,6 +63,23 @@
     if (debugMode && typeof console !== 'undefined' && console.log) {
       console.log.apply(console, ['[Embed]'].concat(Array.prototype.slice.call(arguments)));
     }
+  }
+
+  /** Expose for block scripts: paths, registry, helpers. Block scripts read from this and register runners. */
+  if (typeof window !== 'undefined') {
+    window.SiteBlocks = {
+      loaded: true,
+      siteKey: siteKey || null,
+      debug: debugMode,
+      EMBED_BASE: EMBED_BASE,
+      CONFIG_PATH: CONFIG_PATH,
+      EVENTS_PATH: EVENTS_PATH,
+      SHOPIFY_COUNT_PATH: SHOPIFY_COUNT_PATH,
+      SHOPIFY_ADD_TO_CART_PATH: SHOPIFY_ADD_TO_CART_PATH,
+      blockRegistry: blockRegistry,
+      log: log,
+      showDebugBadge: showDebugBadge
+    };
   }
 
   /**
@@ -128,22 +145,8 @@
         const blocks = data && data.blocks ? data.blocks : [];
         log('Blocks:', blocks.length);
         showDebugBadge('SiteBlocks: loaded, ' + blocks.length + ' block(s)');
-        blocks.forEach(function (block) {
-          if (!shouldShowBlock(block.display_rules)) {
-            log('Block skipped by display_rules:', block.id);
-            return;
-          }
-          const runner = blockRegistry[block.type];
-          if (typeof runner !== 'function') {
-            log('No runner for type:', block.type);
-            return;
-          }
-          try {
-            runner(block, siteKey);
-          } catch (err) {
-            log('Block error', block.id, block.type, err);
-          }
-        });
+        const types = blocks.length ? [...new Set(blocks.map(function (b) { return b.type; }))] : [];
+        loadBlockScripts(types, blocks, runBlocks);
       })
       .catch(function (err) {
         log('Config fetch error', err);
@@ -152,201 +155,52 @@
   }
 
   /**
-   * Block registry: type -> function(blockConfig, siteKey).
+   * Load block scripts for given types, then run all blocks. Each script registers its runner in blockRegistry.
+   * On script load error we continue; that block type is skipped when running.
    */
-  const blockRegistry = {};
-
-  /**
-   * Shopify Add To Cart Counter: show count under add-to-cart, intercept /cart/add.js.
-   */
-  function runShopifyAddToCartCounter(block, siteKey) {
-    const settings = block.settings || {};
-    const targetSelector = settings.target_selector || '[data-product-form], form[action*="/cart/add"]';
-    const insertPosition = settings.insert_position || 'after';
-    const messageTemplate = settings.message_template || 'This product was added to cart @{{ count }} times';
-    const messageClass = settings.message_class || 'embed-add-to-cart-count';
-    const minCountToShow = settings.min_count_to_show != null ? Number(settings.min_count_to_show) : 1;
-    const countScope = settings.count_scope || 'variant';
-    const apiBase = EMBED_BASE;
-
-    if (settings.custom_css && typeof document !== 'undefined' && document.head) {
-      try {
-        var styleId = 'data-embed-block-style-' + String(block.id);
-        if (!document.getElementById(styleId)) {
-          var styleEl = document.createElement('style');
-          styleEl.id = styleId;
-          styleEl.setAttribute('data-embed-block-id', String(block.id));
-          styleEl.textContent = String(settings.custom_css);
-          document.head.appendChild(styleEl);
-        }
-      } catch (e) {}
+  function loadBlockScripts(types, blocks, runBlocks) {
+    if (!types || types.length === 0) {
+      runBlocks(blocks);
+      return;
     }
-
-    function getProductId() {
-      try {
-        if (typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product && window.ShopifyAnalytics.meta.product.id) {
-          return String(window.ShopifyAnalytics.meta.product.id);
-        }
-        if (typeof window.meta !== 'undefined' && window.meta && window.meta.product && window.meta.product.id) {
-          return String(window.meta.product.id);
-        }
-      } catch (e) {}
-      return null;
+    var pending = types.length;
+    function done() {
+      pending--;
+      if (pending === 0) runBlocks(blocks);
     }
-
-    function getVariantIdFromForm(form) {
-      if (!form) return null;
-      const input = form.querySelector('input[name="id"]');
-      return input ? String(input.value).trim() : null;
-    }
-
-    function getProductSlug() {
-      try {
-        if (typeof location !== 'undefined' && location.pathname) {
-          const m = location.pathname.match(/\/products\/([^/]+)/);
-          return m ? m[1] : null;
-        }
-      } catch (e) {}
-      return null;
-    }
-
-    function getIds() {
-      const productId = getProductId();
-      const form = document.querySelector('form[action*="/cart/add"]');
-      const variantId = getVariantIdFromForm(form);
-      const scope = countScope === 'product' && productId ? 'product' : 'variant';
-      const pid = scope === 'product' ? productId : null;
-      const vid = scope === 'variant' ? (variantId || productId) : null;
-      return { scope: scope, productId: pid, variantId: vid };
-    }
-
-    function buildCountUrl(ids) {
-      let u = apiBase + SHOPIFY_COUNT_PATH + '?site_key=' + encodeURIComponent(siteKey);
-      if (block.id != null) u += '&block_id=' + encodeURIComponent(String(block.id));
-      if (ids.productId) u += '&product_id=' + encodeURIComponent(ids.productId);
-      if (ids.variantId) u += '&variant_id=' + encodeURIComponent(ids.variantId);
-      return u;
-    }
-
-    function renderMessage(count) {
-      const text = messageTemplate.replace(/\{\{\s*count\s*\}\}/g, String(count));
-      const el = document.createElement('div');
-      el.className = messageClass;
-      el.setAttribute('data-embed-block-id', String(block.id));
-      el.textContent = text;
-      return el;
-    }
-
-    function placeMessage(el, anchor) {
-      if (!anchor || !anchor.parentNode) return;
-      switch (insertPosition) {
-        case 'before':
-          anchor.parentNode.insertBefore(el, anchor);
-          break;
-        case 'prepend':
-          anchor.insertBefore(el, anchor.firstChild);
-          break;
-        case 'append':
-          anchor.appendChild(el);
-          break;
-        default:
-          anchor.parentNode.insertBefore(el, anchor.nextSibling);
-      }
-    }
-
-    function updateDisplay(count, messageEl) {
-      if (messageEl) {
-        const text = messageTemplate.replace(/\{\{\s*count\s*\}\}/g, String(count));
-        messageEl.textContent = text;
-      }
-    }
-
-    function fetchCountAndShow(anchor, messageEl) {
-      const ids = getIds();
-      if (ids.scope === 'variant' && !ids.variantId) return;
-      if (ids.scope === 'product' && !ids.productId) return;
-
-      fetch(buildCountUrl(ids), { method: 'GET', credentials: 'omit' })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          const count = data && typeof data.count === 'number' ? data.count : 0;
-          if (count >= minCountToShow) {
-            if (!messageEl) {
-              messageEl = renderMessage(count);
-              placeMessage(messageEl, anchor);
-            }
-            updateDisplay(count, messageEl);
-          }
-        })
-        .catch(function () {});
-    }
-
-    function incrementAndRefresh(ids, pageUrl) {
-      const body = {
-        site_key: siteKey,
-        block_id: block.id,
-        product_id: ids.productId || null,
-        variant_id: ids.variantId || null,
-        page_url: pageUrl || (typeof location !== 'undefined' ? location.href : ''),
-        product_slug: getProductSlug() || null
+    types.forEach(function (type) {
+      var script = document.createElement('script');
+      script.src = EMBED_BASE + '/embed/blocks/' + encodeURIComponent(type) + '.js';
+      script.onload = done;
+      script.onerror = function () {
+        log('Block script failed to load:', type);
+        done();
       };
-      fetch(apiBase + SHOPIFY_ADD_TO_CART_PATH, {
-        method: 'POST',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          const count = data && typeof data.count === 'number' ? data.count : 0;
-          const anchor = document.querySelector(targetSelector);
-          const messageEl = anchor ? anchor.parentNode.querySelector('.' + messageClass) : null;
-          if (count >= minCountToShow) {
-            if (!messageEl && anchor) {
-              const newEl = renderMessage(count);
-              placeMessage(newEl, anchor);
-            } else {
-              updateDisplay(count, messageEl);
-            }
-          }
-        })
-        .catch(function () {});
-    }
-
-    const anchor = document.querySelector(targetSelector);
-    if (anchor) {
-      fetchCountAndShow(anchor, null);
-    }
-
-    const origFetch = window.fetch;
-    if (typeof origFetch === 'function') {
-      window.fetch = function (url, opts) {
-        const req = origFetch.apply(this, arguments);
-        const urlStr = typeof url === 'string' ? url : (url && url.url) || '';
-        if (urlStr.indexOf('/cart/add.js') >= 0) {
-          req.then(function (res) {
-            if (res && res.ok && res.clone) {
-              res.clone().json().then(function (body) {
-                try {
-                  const variantId = body.variant_id ? String(body.variant_id) : null;
-                  const productId = getProductId();
-                  const scope = countScope === 'product' && productId ? 'product' : 'variant';
-                  const ids = { scope: scope, productId: productId, variantId: variantId || getVariantIdFromForm(document.querySelector('form[action*="/cart/add"]')) };
-                  if (ids.variantId || ids.productId) {
-                    incrementAndRefresh(ids, typeof location !== 'undefined' ? location.href : '');
-                  }
-                } catch (e) {}
-              }).catch(function () {});
-            }
-          });
-        }
-        return req;
-      };
-    }
+      (document.head || document.documentElement).appendChild(script);
+    });
   }
 
-  blockRegistry.shopify_add_to_cart_counter = runShopifyAddToCartCounter;
-  @include('embed.blocks.video_call_button')
+  /**
+   * Run each block: shouldShowBlock filter and try/catch per block so one failure does not break others.
+   */
+  function runBlocks(blocks) {
+    blocks.forEach(function (block) {
+      if (!shouldShowBlock(block.display_rules)) {
+        log('Block skipped by display_rules:', block.id);
+        return;
+      }
+      var runner = blockRegistry[block.type];
+      if (typeof runner !== 'function') {
+        log('No runner for type:', block.type);
+        return;
+      }
+      try {
+        runner(block, siteKey);
+      } catch (err) {
+        log('Block error', block.id, block.type, err);
+      }
+    });
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadAndRun);

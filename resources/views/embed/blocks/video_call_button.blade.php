@@ -1,13 +1,14 @@
-{{--
-  Video Call (WhatsApp) Button block runner.
-  Injected into embed script; uses blockRegistry, EMBED_BASE, EVENTS_PATH, siteKey from parent scope.
-  @verbatim ensures {{ product_title }} etc. are output literally for the message template.
---}}
+{{-- Video Call (WhatsApp) Button block script. Loaded dynamically by embed loader. Reads from window.SiteBlocks. --}}
+(function () {
+  'use strict';
+  var siteBlocks = typeof window !== 'undefined' && window.SiteBlocks;
+  if (!siteBlocks || !siteBlocks.blockRegistry) return;
+  var EMBED_BASE = siteBlocks.EMBED_BASE || '';
+  var EVENTS_PATH = siteBlocks.EVENTS_PATH || '/api/public/events';
+  var blockRegistry = siteBlocks.blockRegistry;
+
 @verbatim
-  /**
-   * Video Call Button: business-hours badge (ONLINE/OFFLINE) and WhatsApp button with product context.
-   * Tracks clicks via POST /api/public/events (event_name: click, payload: product_title, product_url, product_price).
-   */
+  // VideoCall Button: business-hours badge and WhatsApp button with product context.
   function runVideoCallButton(block, siteKey) {
     const settings = block.settings || {};
     const phone = (settings.phone || '').trim();
@@ -19,7 +20,7 @@
     const buttonText = settings.button_text || 'התחל שיחת וידאו לצפייה במוצר';
     const targetSelector = settings.target_selector || '[data-product-form], form[action*="/cart/add"]';
     const insertPosition = settings.insert_position || 'after';
-    const messageTemplate = settings.message_template || '*התחלת שיחת וידאו לצפייה במוצר:*\n*{{product_title}}*\n{{product_price}}\n\n{{product_url}}';
+    const messageTemplate = settings.message_template || "*התחלת שיחת וידאו לצפייה במוצר:*\n*{{product_title}}*\n{{product_price}}\n\n{{product_url}}";
     const apiBase = EMBED_BASE;
 
     if (settings.custom_css && typeof document !== 'undefined' && document.head) {
@@ -170,3 +171,4 @@
 
   blockRegistry.video_call_button = runVideoCallButton;
 @endverbatim
+})();

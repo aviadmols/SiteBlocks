@@ -8,9 +8,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/embed.js', EmbedScriptController::class)
+Route::get('/embed.js', [EmbedScriptController::class, 'loader'])
     ->middleware('throttle:120,1')
     ->name('embed.script');
+
+Route::get('/embed/blocks/{type}.js', [EmbedScriptController::class, 'block'])
+    ->where('type', 'shopify_add_to_cart_counter|video_call_button')
+    ->middleware('throttle:120,1')
+    ->name('embed.block');
 
 
 Route::get('/dashboard', function () {
