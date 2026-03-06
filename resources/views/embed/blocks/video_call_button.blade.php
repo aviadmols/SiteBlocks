@@ -8,8 +8,8 @@
   var blockRegistry = siteBlocks.blockRegistry;
 
 @verbatim
-  // VideoCall Button: business-hours badge and WhatsApp button with product context.
-  function runVideoCallButton(block, siteKey) {
+  // WhatsApp video button: business-hours badge and product context.
+  function runVcButton(block, siteKey) {
     const settings = block.settings || {};
     const phone = (settings.phone || '').trim();
     const openDaysStr = (settings.open_days || '0,1,2,3,4,5').trim();
@@ -169,6 +169,6 @@
     placeEl(root, anchor);
   }
 
-  blockRegistry.video_call_button = runVideoCallButton;
+  blockRegistry.video_call_button = runVcButton;
 @endverbatim
 })();
