@@ -23,7 +23,12 @@ class ShopifyAddToCartService
         }
 
         if ($scope === AddToCartCount::SCOPE_PRODUCT) {
-            $query->where('product_id', (string) $productId)->whereNull('variant_id');
+            $query->where('product_id', (string) $productId);
+            if ($variantId !== null && $variantId !== '') {
+                $query->where('variant_id', (string) $variantId);
+            } else {
+                $query->whereNull('variant_id');
+            }
         } else {
             $query->where('variant_id', (string) $variantId);
         }
