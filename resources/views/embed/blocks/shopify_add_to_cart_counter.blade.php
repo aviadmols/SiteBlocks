@@ -140,9 +140,7 @@
       var productId = getProductId(formEl);
       var variantId = getVariantIdFromForm(formEl);
       var scope = countScope === 'product' ? 'product' : 'variant';
-      var pid = scope === 'product' ? productId : null;
-      var vid = scope === 'variant' ? variantId : null;
-      return { scope: scope, productId: pid, variantId: vid };
+      return { scope: scope, productId: productId, variantId: variantId };
     }
 
     function buildCountUrl(ids) {
@@ -188,16 +186,14 @@
 
     function fetchCountAndShow(anchor, messageEl, formEl) {
       var ids = getIds(formEl);
-      if (ids.scope === 'variant' && !ids.variantId) {
-        log('Missing variant id; not fetching count');
+      if (!ids.productId && !ids.variantId) {
+        log('Missing product and variant id; not fetching count');
         return;
       }
-      if (ids.scope === 'product' && !ids.productId) {
-        log('Missing product id; not fetching count');
-        return;
-      }
+      var url = buildCountUrl(ids);
+      if (url.indexOf('product_id=') < 0 && url.indexOf('variant_id=') < 0) return;
 
-      fetch(buildCountUrl(ids), { method: 'GET', credentials: 'omit' })
+      fetch(url, { method: 'GET', credentials: 'omit' })
         .then(function (r) {
           if (!r.ok) throw new Error('count ' + r.status);
           return r.json();
@@ -227,7 +223,7 @@
       function hasIds(formEl) {
         var ids = getIds(formEl);
         if (!ids) return false;
-        if (ids.scope === 'variant') return !!ids.variantId;
+        if (ids.scope === 'variant') return !!ids.variantId || !!ids.productId;
         if (ids.scope === 'product') return !!ids.productId;
         return false;
       }
