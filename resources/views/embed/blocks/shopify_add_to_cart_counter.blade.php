@@ -330,7 +330,10 @@
           }
         });
       }
-      scheduleInitialFetch(anchor, form || null);
+      // Small delay so theme/Shopify scripts can set product_id and variant_id before we fetch count
+      setTimeout(function () {
+        scheduleInitialFetch(anchor, form || null);
+      }, 400);
     }
 
     var origFetch = window.fetch;

@@ -36,6 +36,12 @@
       } catch (e) {}
     }
 
+    function formatPriceFromCents(val) {
+      var num = Number(val);
+      if (!isFinite(num)) return '';
+      return (num / 100).toFixed(2);
+    }
+
     function getProductInfo() {
       var out = { product_title: '', product_url: '', product_price: '' };
       try {
@@ -43,13 +49,13 @@
         if (typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product) {
           var p = window.ShopifyAnalytics.meta.product;
           if (p.title) out.product_title = String(p.title);
-          if (p.price !== undefined) out.product_price = String(p.price);
-          if (!out.product_price && p.variants && p.variants[0] && p.variants[0].price !== undefined) out.product_price = String(p.variants[0].price);
+          if (p.price !== undefined) out.product_price = formatPriceFromCents(p.price);
+          if (!out.product_price && p.variants && p.variants[0] && p.variants[0].price !== undefined) out.product_price = formatPriceFromCents(p.variants[0].price);
         }
         if (typeof window.meta !== 'undefined' && window.meta && window.meta.product) {
           var q = window.meta.product;
           if (q.title) out.product_title = out.product_title || String(q.title);
-          if (q.price !== undefined) out.product_price = out.product_price || String(q.price);
+          if (q.price !== undefined) out.product_price = out.product_price || formatPriceFromCents(q.price);
         }
         if (!out.product_title && typeof document !== 'undefined') {
           var ogTitle = document.querySelector('meta[property="og:title"]');
