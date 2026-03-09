@@ -199,6 +199,7 @@
       var existing = container.querySelector('.' + messageMainClass);
       if (existing) return existing;
       var el = renderMessage(0);
+      if (minCountToShow >= 1) el.style.display = 'none';
       placeMessage(el, anchor);
       return el;
     }
@@ -206,11 +207,13 @@
     function fetchCountAndShow(anchor, messageEl, formEl) {
       var ids = getIds(formEl);
       if (!ids.productId && !ids.variantId) {
-        log('Missing product and variant id; not fetching count');
+        log('Reason: not showing – Missing product and variant id; not fetching count');
         return;
       }
       var url = buildCountUrl(ids);
       if (url.indexOf('product_id=') < 0 && url.indexOf('variant_id=') < 0) return;
+
+      if (debug) log('Fetching count URL:', url);
 
       fetch(url, { method: 'GET', credentials: 'omit' })
         .then(function (r) {
@@ -220,15 +223,22 @@
         .then(function (data) {
           var count = data && data.count != null ? Number(data.count) : 0;
           if (!isFinite(count)) count = 0;
+          if (debug) log('Count from API:', count, 'minCountToShow:', minCountToShow);
           if (messageEl) {
             updateDisplay(count, messageEl);
+            if (count >= minCountToShow) {
+              messageEl.style.display = '';
+            } else {
+              messageEl.style.display = 'none';
+              if (debug) log('Reason: not showing – count', count, '< minCountToShow', minCountToShow);
+            }
           } else if (count >= minCountToShow) {
             messageEl = renderMessage(count);
             placeMessage(messageEl, anchor);
           }
         })
         .catch(function (err) {
-          log('GET count failed', err);
+          log('GET count failed – Reason: not showing', err);
         });
     }
 
@@ -269,7 +279,7 @@
                 fetchCountAndShow(fallbackAnchor, existingMsg, null);
               }
             }
-            log('Anchor not found after waiting; will rely on submit/fetch hook');
+            if (debug) log('Reason: not showing – Anchor not found after', maxAttempts, 'attempts; targetSelector:', targetSelector);
             stop();
             return;
           }
@@ -285,13 +295,13 @@
         }
 
         if (attempts >= maxAttempts) {
-          if (messageEl) updateDisplay(0, messageEl);
+          if (messageEl && minCountToShow === 0) updateDisplay(0, messageEl);
           var fallbackIds = getIds(null);
           if ((fallbackIds.productId || fallbackIds.variantId) && document.body) {
             var existingMsg = ensureMessage(document.body);
             fetchCountAndShow(document.body, existingMsg, null);
           }
-          log('IDs not available after waiting; will rely on submit/fetch hook');
+          if (debug) log('Reason: not showing – productId/variantId not found after', maxAttempts, 'attempts; fallback getIds(null):', fallbackIds.productId || fallbackIds.variantId ? 'has ids, fetching' : 'no ids');
           stop();
           return;
         }
@@ -342,19 +352,38 @@
           var count = data && data.count != null ? Number(data.count) : 0;
           if (!isFinite(count)) count = 0;
           var anchor = document.querySelector(targetSelector);
-          var messageEl = anchor ? anchor.parentNode.querySelector('.' + messageMainClass) : null;
-          if (count >= minCountToShow) {
-            if (!messageEl && anchor) {
-              var newEl = renderMessage(count);
-              placeMessage(newEl, anchor);
-            } else if (messageEl) {
-              updateDisplay(count, messageEl);
-            }
+          var messageEl = (anchor && anchor.parentNode ? anchor.parentNode.querySelector('.' + messageMainClass) : null) || document.body.querySelector('.' + messageMainClass);
+          if (!messageEl && anchor) {
+            var newEl = renderMessage(count);
+            if (count < minCountToShow) newEl.style.display = 'none';
+            placeMessage(newEl, anchor);
+            messageEl = newEl;
+          }
+          if (messageEl) {
+            updateDisplay(count, messageEl);
+            messageEl.style.display = count >= minCountToShow ? '' : 'none';
           }
         })
         .catch(function (err) {
           log('POST add-to-cart failed', err);
         });
+    }
+
+    if (debug) {
+      var snap = getIds(null);
+      var anchorSnap = typeof document !== 'undefined' ? document.querySelector(targetSelector) : null;
+      var formSnap = anchorSnap ? findNearestCartAddForm(anchorSnap) : null;
+      log('=== Product info on page load (before fetch) ===', {
+        productId: snap.productId,
+        variantId: snap.variantId,
+        scope: snap.scope,
+        anchorFound: !!anchorSnap,
+        formFound: !!formSnap,
+        targetSelector: targetSelector,
+        minCountToShow: minCountToShow,
+        countScope: countScope,
+        pageUrl: typeof location !== 'undefined' ? location.href : ''
+      });
     }
 
     var anchor = document.querySelector(targetSelector);
