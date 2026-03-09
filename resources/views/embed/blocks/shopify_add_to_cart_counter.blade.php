@@ -332,7 +332,9 @@
       }
       // Small delay so theme/Shopify scripts can set product_id and variant_id before we fetch count
       setTimeout(function () {
-        scheduleInitialFetch(anchor, form || null);
+        var currentAnchor = document.querySelector(targetSelector);
+        var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
+        if (currentAnchor) scheduleInitialFetch(currentAnchor, currentForm || null);
       }, 400);
     }
 
