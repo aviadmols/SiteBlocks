@@ -218,13 +218,13 @@
         });
     }
 
-    function scheduleInitialFetch(anchor, formEl) {
+    function scheduleInitialFetch() {
       var stopped = false;
       var attempts = 0;
       var maxAttempts = 60; // up to ~30s (dynamic backoff)
       var observer = null;
 
-      function hasIds() {
+      function hasIds(formEl) {
         var ids = getIds(formEl);
         if (!ids) return false;
         if (ids.scope === 'variant') return !!ids.variantId;
@@ -243,9 +243,21 @@
         if (stopped) return;
         attempts++;
 
-        var messageEl = anchor && anchor.parentNode ? anchor.parentNode.querySelector('.' + messageMainClass) : null;
-        if (hasIds()) {
-          fetchCountAndShow(anchor, messageEl, formEl);
+        var currentAnchor = document.querySelector(targetSelector);
+        var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
+        if (!currentAnchor) {
+          if (attempts >= maxAttempts) {
+            log('Anchor not found after waiting; will rely on submit/fetch hook');
+            stop();
+            return;
+          }
+          var delay = Math.min(250 + attempts * 50, 1500);
+          setTimeout(tick, delay);
+          return;
+        }
+        var messageEl = currentAnchor.parentNode ? currentAnchor.parentNode.querySelector('.' + messageMainClass) : null;
+        if (hasIds(currentForm)) {
+          fetchCountAndShow(currentAnchor, messageEl, currentForm);
           stop();
           return;
         }
@@ -256,7 +268,6 @@
           return;
         }
 
-        // gentle backoff: 250ms..1500ms
         var delay = Math.min(250 + attempts * 50, 1500);
         setTimeout(tick, delay);
       }
@@ -267,9 +278,11 @@
           var root = document.documentElement || document.body;
           if (root) {
             observer = new MutationObserver(function () {
-              if (hasIds()) {
-                var messageEl = anchor && anchor.parentNode ? anchor.parentNode.querySelector('.' + messageMainClass) : null;
-                fetchCountAndShow(anchor, messageEl, formEl);
+              var currentAnchor = document.querySelector(targetSelector);
+              var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
+              if (currentAnchor && hasIds(currentForm)) {
+                var messageEl = currentAnchor.parentNode ? currentAnchor.parentNode.querySelector('.' + messageMainClass) : null;
+                fetchCountAndShow(currentAnchor, messageEl, currentForm);
                 stop();
               }
             });
@@ -330,12 +343,7 @@
           }
         });
       }
-      // Small delay so theme/Shopify scripts can set product_id and variant_id before we fetch count
-      setTimeout(function () {
-        var currentAnchor = document.querySelector(targetSelector);
-        var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
-        if (currentAnchor) scheduleInitialFetch(currentAnchor, currentForm || null);
-      }, 400);
+      scheduleInitialFetch();
     }
 
     var origFetch = window.fetch;
