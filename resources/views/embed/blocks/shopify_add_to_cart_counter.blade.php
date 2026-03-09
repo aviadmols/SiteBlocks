@@ -1,3 +1,5 @@
+{{-- Shopify Add To Cart Counter block script. Loaded dynamically by embed loader. Reads from window.SiteBlocks. --}}
+@verbatim
 // Shopify Add To Cart Counter block script. Loaded dynamically by embed loader. Reads from window.SiteBlocks.
 (function () {
   'use strict';
@@ -407,3 +409,4 @@
 
   blockRegistry.shopify_add_to_cart_counter = runShopifyAddToCartCounter;
 })();
+@endverbatim
