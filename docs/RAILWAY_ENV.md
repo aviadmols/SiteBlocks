@@ -134,3 +134,10 @@
 - בפרודקשן ה־cache מוגדר כברירת מחדל ל־`file` כדי שלא יהיה תלות ב־DB ל־cache; גם כך חובה להגדיר את חיבור ה־DB להתחברות ולנתונים.
 
 **אם עדיין מופיע "Connection: sqlite":** ה־build מריץ `config:cache` כש־DATABASE_URL אולי עדיין לא זמין, ולכן ה־config השמור "זוכר" חיבור לא נכון. ה־Procfile מריץ `php artisan config:clear` לפני ההפעלה כדי שה־config ייבנה מחדש מה־env בזמן ריצה. וודא ש־**DATABASE_URL** אכן מוזרק משירות Postgres (הקישור בין SiteBlocks ל־Postgres אמור לעשות זאת).
+
+---
+
+## ה-DB מתאפס אחרי כל push ל-Git
+
+אם אחרי עדכון ב-Git המסד נתונים נראה ריק – **בקוד הפרויקט אין שום פקודה שמוחקת או מאפסת DB**. הסיבה בדרך כלל בהגדרות Railway (מסד חדש בכל deploy, או פקודת migrate:fresh בהגדרות).  
+→ ראה **[DB_RESET_TROUBLESHOOTING.md](DB_RESET_TROUBLESHOOTING.md)** לבדיקות ופתרונות.

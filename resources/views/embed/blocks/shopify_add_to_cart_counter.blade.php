@@ -82,6 +82,8 @@
           if (formEl && formEl.getAttribute('data-product-id')) return String(formEl.getAttribute('data-product-id')).trim();
           var dataEl = document.querySelector('[data-product-id]');
           if (dataEl && dataEl.getAttribute('data-product-id')) return String(dataEl.getAttribute('data-product-id')).trim();
+          var metaProductId = document.querySelector('meta[property="product:id"], meta[name="product-id"], meta[property="og:product:id"]');
+          if (metaProductId && metaProductId.getAttribute('content')) return String(metaProductId.getAttribute('content')).trim();
           var jsonLd = document.querySelector('script[type="application/ld+json"]');
           if (jsonLd && jsonLd.textContent) {
             try {
@@ -161,7 +163,12 @@
     }
 
     function placeMessage(el, anchor) {
-      if (!anchor || !anchor.parentNode) return;
+      if (!anchor) return;
+      if (anchor === document.body) {
+        anchor.appendChild(el);
+        return;
+      }
+      if (!anchor.parentNode) return;
       switch (insertPosition) {
         case 'before':
           anchor.parentNode.insertBefore(el, anchor);
@@ -184,6 +191,16 @@
       }
     }
 
+    function ensureMessage(anchor) {
+      if (!anchor || !anchor.parentNode) return null;
+      var container = anchor === document.body ? anchor : anchor.parentNode;
+      var existing = container.querySelector('.' + messageMainClass);
+      if (existing) return existing;
+      var el = renderMessage(0);
+      placeMessage(el, anchor);
+      return el;
+    }
+
     function fetchCountAndShow(anchor, messageEl, formEl) {
       var ids = getIds(formEl);
       if (!ids.productId && !ids.variantId) {
@@ -201,12 +218,11 @@
         .then(function (data) {
           var count = data && data.count != null ? Number(data.count) : 0;
           if (!isFinite(count)) count = 0;
-          if (count >= minCountToShow) {
-            if (!messageEl) {
-              messageEl = renderMessage(count);
-              placeMessage(messageEl, anchor);
-            }
+          if (messageEl) {
             updateDisplay(count, messageEl);
+          } else if (count >= minCountToShow) {
+            messageEl = renderMessage(count);
+            placeMessage(messageEl, anchor);
           }
         })
         .catch(function (err) {
@@ -243,6 +259,14 @@
         var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
         if (!currentAnchor) {
           if (attempts >= maxAttempts) {
+            var fallbackIds = getIds(null);
+            if (fallbackIds.productId || fallbackIds.variantId) {
+              var fallbackAnchor = typeof document !== 'undefined' && document.body ? document.body : null;
+              if (fallbackAnchor) {
+                var existingMsg = ensureMessage(fallbackAnchor);
+                fetchCountAndShow(fallbackAnchor, existingMsg, null);
+              }
+            }
             log('Anchor not found after waiting; will rely on submit/fetch hook');
             stop();
             return;
@@ -251,7 +275,7 @@
           setTimeout(tick, delay);
           return;
         }
-        var messageEl = currentAnchor.parentNode ? currentAnchor.parentNode.querySelector('.' + messageMainClass) : null;
+        var messageEl = ensureMessage(currentAnchor);
         if (hasIds(currentForm)) {
           fetchCountAndShow(currentAnchor, messageEl, currentForm);
           stop();
@@ -259,6 +283,12 @@
         }
 
         if (attempts >= maxAttempts) {
+          if (messageEl) updateDisplay(0, messageEl);
+          var fallbackIds = getIds(null);
+          if ((fallbackIds.productId || fallbackIds.variantId) && document.body) {
+            var existingMsg = ensureMessage(document.body);
+            fetchCountAndShow(document.body, existingMsg, null);
+          }
           log('IDs not available after waiting; will rely on submit/fetch hook');
           stop();
           return;
@@ -277,7 +307,7 @@
               var currentAnchor = document.querySelector(targetSelector);
               var currentForm = currentAnchor ? findNearestCartAddForm(currentAnchor) : null;
               if (currentAnchor && hasIds(currentForm)) {
-                var messageEl = currentAnchor.parentNode ? currentAnchor.parentNode.querySelector('.' + messageMainClass) : null;
+                var messageEl = ensureMessage(currentAnchor);
                 fetchCountAndShow(currentAnchor, messageEl, currentForm);
                 stop();
               }
@@ -326,7 +356,7 @@
     }
 
     var anchor = document.querySelector(targetSelector);
-    if (!anchor) log('Anchor not found:', targetSelector);
+    if (!anchor) log('Anchor not found on first run:', targetSelector, '- will keep trying in background');
     if (anchor) {
       var form = findNearestCartAddForm(anchor);
       if (form && !form.getAttribute('data-embed-add-to-cart-submit')) {
@@ -339,8 +369,8 @@
           }
         });
       }
-      scheduleInitialFetch();
     }
+    scheduleInitialFetch();
 
     var origFetch = window.fetch;
     if (typeof origFetch === 'function' && !globalState.fetchPatched) {
